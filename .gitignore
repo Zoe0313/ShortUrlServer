@@ -1,0 +1,10 @@
+.idea/
+
+**/*.log
+**/log/
+
+*.rdb
+
+venv/
+
+.DS_Store

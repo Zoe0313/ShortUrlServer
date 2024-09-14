@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv
+  namespace: vsan-short-url-prod
+spec:
+  capacity:
+    storage: 100Gi
+  volumeMode: Filesystem
+  accessModes: ["ReadWriteMany"]
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: local-storage
+  local:
+    path: /data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+      - matchExpressions:
+        - key: kubernetes.io/hostname
+          operator: In
+          values:
+          - w3-vsan-sherpa-10-208-103-172.eng.vmware.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-svc
+  namespace: vsan-short-url-prod
+spec:
+  type: NodePort
+  selector:
+    app: redis-stack
+  ports:
+  - port: 6379
+    targetPort: 6379
+    nodePort: 30001
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: redis-stack
+  namespace: vsan-short-url-prod
+spec:
+  selector:
+    matchLabels:
+      app: redis-stack
+      environment: product
+  serviceName: "redis-svc"
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: redis-stack
+        environment: product
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: redis-stack
+        image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/product/slackbot/redis-stack:latest
+        command: ["redis-stack-server"]
+        args:
+          - "--bind 0.0.0.0"
+          - "--requirepass shorturl"
+          - "--save 60 1000"
+          - "--appendonly yes"
+          - "--appendfilename appendonly.aof"
+          - "--dir /data"
+          - "--logfile /data/redis.log"
+        ports:
+          - containerPort: 6379
+        volumeMounts:
+          - name: redis-persistent-storage
+            mountPath: /data
+        resources:
+          requests:
+            memory: "200Mi"
+            cpu: "200m"
+          limits:
+            memory: "400Mi"
+            cpu: "400m"
+  volumeClaimTemplates:
+  - metadata:
+      name: redis-persistent-storage
+    spec:
+      accessModes: ["ReadWriteMany"]
+      storageClassName: local-storage
+      resources:
+        requests:
+          storage: 90Gi

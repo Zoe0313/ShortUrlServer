@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: url-shortener
+spec:
+  selector:
+    matchLabels:
+      app: url-shortener
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: url-shortener
+        environment: product
+    spec:
+      containers:
+        - name: url-shortener
+          image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/product/slackbot/url-shortener:latest
+          env:
+            - name: STAGE
+              value: "product"
+            - name: SHORT_KEY_GENERATION_RETRIES_COUNT
+              value: "5"
+            - name: SHORT_URL_LENGTH
+              value: "5"
+            - name: ALIAS_URL_MIN_LENGTH
+              value: "5"
+            - name: ALIAS_URL_MAX_LENGTH
+              value: "16"
+            - name: SHORT_KEY_PREFIX
+              value: "http://10.208.103.172:30019/"
+            - name: REDIS_OM_URL
+              value: "redis://:shorturl@10.208.103.172:30001"
+            - name: PORT
+              value: "5000"
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5000
+          volumeMounts:
+          - name: build-toolchain
+            mountPath: /build/toolchain/
+          - name: build-apps
+            mountPath: /build/apps/
+          resources:
+            requests:
+              memory: "200Mi"
+              cpu: "100m"
+            limits:
+              memory: "500Mi"
+              cpu: "200m"
+      volumes:
+        - name: build-toolchain
+          nfs:
+            server: build-toolchain.eng.vmware.com
+            path: /toolchain
+        - name: build-apps
+          nfs:
+            server: build-apps.eng.vmware.com
+            path: /apps
+      dnsPolicy: "None"
+      dnsConfig:
+        nameservers:
+          - 10.142.7.1
+        searches:
+          - eng.vmware.com
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: url-shortener-svc
+spec:
+  type: NodePort
+  selector:
+    app: url-shortener
+  ports:
+  - port: 5000
+    targetPort: 5000
+    nodePort: 30019
