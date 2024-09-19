@@ -18,7 +18,6 @@ COPY . /app
 RUN pip3 install -r requirements.txt
 
 ENV FLASK_APP=/app/app.py
-ENV REDIS_OM_URL=redis://:shorturl@10.208.103.172:30001
 
 EXPOSE 5000
 
