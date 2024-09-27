@@ -12,7 +12,7 @@ import json
 import os
 from constant import SHORT_KEY_PREFIX
 
-API = SHORT_KEY_PREFIX + 'api/'
+API = 'https://vsanvia.broadcom.net/api/'
 print(API)
 
 def get_short_url(long_url, short_key, expire_type, user_id):

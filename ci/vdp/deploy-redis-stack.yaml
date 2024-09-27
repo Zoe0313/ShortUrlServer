@@ -42,7 +42,7 @@ spec:
           - "--bind 0.0.0.0"
           - "--requirepass ${REDIS_PASSWORD}"
           - "--user shorturl >${REDIS_PASSWORD}"
-          - "--save 1 1"
+          - "--save 3600 1 300 100 60 10000"
           - "--appendonly yes"
           - "--appendfilename appendonly.aof"
           - "--appendfsync everysec"

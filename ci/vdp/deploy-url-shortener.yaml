@@ -33,7 +33,7 @@ spec:
             - name: ALIAS_URL_MAX_LENGTH
               value: "16"
             - name: SHORT_KEY_PREFIX
-              value: "http://vsanvia.broadcom.net/"
+              value: "https://vsanvia.broadcom.net/"
             - name: REDIS_OM_URL
               value: "redis://shorturl:shorturl@vsanperf-shorturl-db.vdp.lvn.broadcom.net:6379"
             - name: PORT
@@ -62,7 +62,7 @@ spec:
   selector:
     app: url-shortener
   ports:
-  - port: 80
+  - port: 443
     targetPort: 5000
 ---
 apiVersion: projectcontour.io/v1
@@ -82,7 +82,7 @@ spec:
         - prefix: /
       services:
         - name: url-shortener-svc
-          port: 80
+          port: 443
       timeoutPolicy:
         response: 480s
 ---
@@ -104,6 +104,6 @@ spec:
         - prefix: /
       services:
         - name: url-shortener-svc
-          port: 80
+          port: 443
       timeoutPolicy:
         response: 480s

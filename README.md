@@ -89,7 +89,7 @@ $ nohup flask run
 Start the Flask application with HTTP on Production
 ```
 $ export REDIS_OM_URL=redis://:shorturl@localhost:10001
-$ export SHORT_KEY_PREFIX=http://vsanvia.vmware.com/
+$ export SHORT_KEY_PREFIX=https://vsanvia.vmware.com/
 $ unset FLASK_ENV
 $ nohup flask run --host 0.0.0.0 --port 80 > /var/log/shorturl.log 2>&1 &
 ```
@@ -141,6 +141,11 @@ way4:
 $ docker exec -it redis redis-cli -p 6379 -a shorturl
 Warning: Using a password with '-a' or '-u' option on the command line interface may not be safe.
 ```
+How to connect the redis db deploy on VDP ON EPC:
+```
+redis-cli -u redis://shorturl:shorturl@vsanperf-shorturl-db.vdp.lvn.broadcom.net:6379
+```
+
 - Simple commands in Redis
 1. Show all keys
 ```

@@ -104,8 +104,7 @@ def shortenUrl():
 
     try:
         shortUrl, urlId = generate_shorturl(userId, originalUrl, shortKey, expireTime)
-        warning = checkBroadcomUrlAccess(originalUrl)
-        return jsonify(short_url=shortUrl, long_url=originalUrl, url_id=urlId, warning=warning)
+        return jsonify(short_url=shortUrl, long_url=originalUrl, url_id=urlId)
     except ValidationError as e:
         error = 'Validation error: ' + str(e)
         return abort(make_response(jsonify(message=error), 500))
@@ -220,8 +219,7 @@ def updateLongurlByShortkey():
         url.hash_original = url2hash(originalUrl)
         url.save()
         shortUrl = SHORT_KEY_PREFIX + url.short_key
-        warning = checkBroadcomUrlAccess(originalUrl)
-        return jsonify(short_url=shortUrl, long_url=url.original_url, url_id=url.pk, warning=warning)
+        return jsonify(short_url=shortUrl, long_url=url.original_url, url_id=url.pk)
     except ValidationError as e:
         error = 'Validation error: ' + str(e)
         app.logger.error(error)
