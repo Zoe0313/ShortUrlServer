@@ -35,7 +35,7 @@ spec:
             - name: SHORT_KEY_PREFIX
               value: "https://vsanvia.broadcom.net/"
             - name: REDIS_OM_URL
-              value: "redis://shorturl:shorturl@vsanperf-shorturl-db.vdp.lvn.broadcom.net:6379"
+              value: "redis://shorturl:shorturl@redis-stack-server-master.vsanperf-shorturl.svc.cluster.local:6379"
             - name: PORT
               value: "5000"
             - name: POD_IP

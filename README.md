@@ -141,10 +141,6 @@ way4:
 $ docker exec -it redis redis-cli -p 6379 -a shorturl
 Warning: Using a password with '-a' or '-u' option on the command line interface may not be safe.
 ```
-How to connect the redis db deploy on VDP ON EPC:
-```
-redis-cli -u redis://shorturl:shorturl@vsanperf-shorturl-db.vdp.lvn.broadcom.net:6379
-```
 
 - Simple commands in Redis
 1. Show all keys

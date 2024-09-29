@@ -21,7 +21,8 @@ def get_short_url(long_url, short_key, expire_type, user_id):
                'expire_type': expire_type,
                'user_id': user_id}
     response = requests.post(url=API + 'shorten',
-                             data=json.dumps(payload))
+                             data=json.dumps(payload),
+                             verify=False)
     if response.status_code == 200:
         data = response.json()
         print(f"== Create a short url: {data['short_url']} ==")
@@ -29,7 +30,7 @@ def get_short_url(long_url, short_key, expire_type, user_id):
     raise Exception(f'fail to get short url [{response.status_code}] {response.json()}')
 
 def redirect_by_short_url(short_url):
-    response = requests.get(short_url, allow_redirects=False)
+    response = requests.get(short_url, allow_redirects=False, verify=False)
     if response.status_code == 302:
         long_url = response.headers.get('location')
         print('-> redirect to:', long_url)
@@ -37,7 +38,7 @@ def redirect_by_short_url(short_url):
     raise Exception(f'fail to get long url [{response.status_code}] {response.json()}')
 
 def query_url_details_by_id(url_id):
-    response = requests.get(url=API + 'url/' + url_id)
+    response = requests.get(url=API + 'url/' + url_id, verify=False)
     if response.status_code == 200:
         data = response.json()
         print(f'== Query url detail by id {url_id} ==')
@@ -47,13 +48,13 @@ def query_url_details_by_id(url_id):
     raise Exception(f'fail to get url details [{response.status_code}]')
 
 def delete_url_by_id(url_id):
-    response = requests.delete(url=API + 'url/' + url_id)
+    response = requests.delete(url=API + 'url/' + url_id, verify=False)
     if response.status_code == 200:
         return
     raise Exception(f'fail to delete url [{response.status_code}]')
 
 def get_urls_by_user(user_id):
-    response = requests.get(url=API + f'urls?user={user_id}')
+    response = requests.get(url=API + f'urls?user={user_id}', verify=False)
     if response.status_code == 200:
         results = response.json()
         urls = results['results']
@@ -65,7 +66,7 @@ def get_urls_by_user(user_id):
 
 def get_urls_by_longurl(longUrl):
     payload = {'original_url': longUrl}
-    response = requests.get(url=API + 'longurl', data=json.dumps(payload))
+    response = requests.get(url=API + 'longurl', data=json.dumps(payload), verify=False)
     if response.status_code == 200:
         results = response.json()
         urls = results['results']
@@ -78,7 +79,8 @@ def get_urls_by_longurl(longUrl):
 def update_longurl_by_id(url_id, long_url):
     payload = {'original_url': long_url}
     response = requests.post(url=API + 'url/' + url_id,
-                             data=json.dumps(payload))
+                             data=json.dumps(payload),
+                             verify=False)
     if response.status_code == 200:
         data = response.json()
         print(f'== Update long url by id {url_id} ==')
@@ -89,7 +91,8 @@ def update_longurl_by_shortkey(short_key, long_url):
     payload = {'short_key': short_key,
                'original_url': long_url}
     response = requests.post(url=API + 'longurl',
-                             data=json.dumps(payload))
+                             data=json.dumps(payload),
+                             verify=False)
     if response.status_code == 200:
         data = response.json()
         print(f"== Update long url by short key [{short_key}] ==")
@@ -97,7 +100,7 @@ def update_longurl_by_shortkey(short_key, long_url):
     raise Exception(f'fail to update the long url by short key [{response.status_code}] {response.json()}')
 
 def get_urls_by_shortkey(short_key):
-    response = requests.get(url=API + f'shortkey/{short_key}')
+    response = requests.get(url=API + f'shortkey/{short_key}', verify=False)
     if response.status_code == 200:
         results = response.json()
         urls = results['results']
@@ -108,7 +111,7 @@ def get_urls_by_shortkey(short_key):
     raise Exception(f"fail to query urls by short key [{response.status_code}]")
 
 def update_shortkey_by_id(url_id, short_key):
-    response = requests.post(url=API + f'shortkey/{url_id}/{short_key}')
+    response = requests.post(url=API + f'shortkey/{url_id}/{short_key}', verify=False)
     if response.status_code == 200:
         data = response.json()
         print(f'== Update short key [{short_key}] by id {url_id} ==')
@@ -124,7 +127,6 @@ def clearAll(testUser):
 if __name__ == "__main__":
     testUser = 'lzoe'
     clearAll(testUser)
-    
     # create a short url by customized short key
     testUrl = 'https://confluence.eng.vmware.com/pages/viewpage.action?spaceKey=SABU&title=vSAN+Slackbot+Notification+Service'
     testShortkey = 'vsan-bot'
@@ -134,23 +136,19 @@ if __name__ == "__main__":
     urlId = result['url_id']
     print(urlId)
     redirect_by_short_url(shortUrl)
-
     # update the long url by short key
     testAnotherUrl = 'https://confluence.eng.vmware.com/display/SABU/vSAN+Short+URL+Service'
     update_longurl_by_shortkey(testShortkey, testAnotherUrl)
     redirect_by_short_url(shortUrl)
-    
     # update the long url by url id
     testAnotherUrl = 'https://vmpool.eng.vmware.com/dashboard/pools'
     update_longurl_by_id(urlId, testAnotherUrl)
     redirect_by_short_url(shortUrl)
-
     # update short key by url id
     testAnotherShortkey = 'vsan-short-url'
     result = update_shortkey_by_id(urlId, testAnotherShortkey)
     shortUrl = result['short_url']
     redirect_by_short_url(shortUrl)
-
     # query the url detail
     query_url_details_by_id(urlId)
     # query url list by user
@@ -160,14 +158,12 @@ if __name__ == "__main__":
     # query url list by short key
     get_urls_by_shortkey(testAnotherShortkey)
     # test the utilization of redirect this short url
-    for _ in range(10):
-        redirect_by_short_url('http://127.0.0.1:5000/HELLO-url')
-    query_url_details_by_id('01J5Z5Y1T5G5BVXCJ5XT8SGPTA')
-
-    # generate short url by broadcom url. check the response data contain warning message.
-    broadcomUrl = 'https://jenkins-vcf-vsan-shanghai-cycle.devops.broadcom.net/'
-    testShortkey = 'test-bc-url'
-    testExp = '1month'
-    result = get_short_url(broadcomUrl, testShortkey, testExp, testUser)
-    print(result)
-    
+    # for _ in range(10):
+    #     redirect_by_short_url('http://127.0.0.1:5000/HELLO-url')
+    # query_url_details_by_id('01J5Z5Y1T5G5BVXCJ5XT8SGPTA')
+    # # generate short url by broadcom url. check the response data contain warning message.
+    # broadcomUrl = 'https://jenkins-vcf-vsan-shanghai-cycle.devops.broadcom.net/'
+    # testShortkey = 'test-bc-url'
+    # testExp = '1month'
+    # result = get_short_url(broadcomUrl, testShortkey, testExp, testUser)
+    # print(result)
