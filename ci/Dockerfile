@@ -25,7 +25,7 @@ RUN chown xl061876:mts -R /app
 USER xl061876
 
 ENV FLASK_APP=/app/app.py
-ENV REDIS_OM_URL=redis://shorturl:shorturl@vsanperf-shorturl-db.vdp.lvn.broadcom.net:6379
+ENV REDIS_OM_URL=redis://shorturl:shorturl@redis-stack-server-master.vsanperf-shorturl.svc.cluster.local:6379
 
 CMD ["flask", "run", "--host", "0.0.0.0", "--port", "5000"]
 
