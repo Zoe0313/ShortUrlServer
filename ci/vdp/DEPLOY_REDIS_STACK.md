@@ -25,13 +25,11 @@ To get your password run:
 
     export REDIS_PASSWORD=$(kubectl get secret --namespace vsanperf-shorturl redis-stack-server -o jsonpath="{.data.redis-password}" | base64 -d)
 
-    G76B7zt4C9
-
 To connect to your Redis&reg; server:
 
 1. Run a Redis&reg; pod that you can use as a client:
 
-   kubectl run --namespace vsanperf-shorturl redis-client --restart='Never'  --env REDIS_PASSWORD=$REDIS_PASSWORD  --image docker.io/redis/redis-stack-server:6.2.6-v7 --command -- sleep infinity
+   kubectl run --namespace vsanperf-shorturl redis-client --restart='Never'  --env REDIS_PASSWORD=9PEojDdPkd  --image docker.io/redis/redis-stack-server:6.2.6-v7 --command -- sleep infinity
 
    Use the following command to attach to the pod:
 
@@ -55,7 +53,7 @@ $ kubectl exec --tty -i redis-client --namespace vsanperf-shorturl -- bash
 Firstly, we create user "shorturl" and set password "shorturl" to it:
 ```
 root@redis-client:/# redis-cli -h redis-stack-server-master
-redis-stack-server-master:6379> auth G76B7zt4C9
+redis-stack-server-master:6379> auth 9PEojDdPkd
 OK
 redis-stack-server-master:6379> acl list
 1) "user default on #38fe51133b34e6ef08e83fc3ab13e197603fbe44832ab3633b2eff25aed88a0f ~* &* +@all"
