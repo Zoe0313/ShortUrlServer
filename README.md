@@ -25,7 +25,7 @@ $ cd url_shortener
 
 - Create a Python virtual environment, and install the project dependencies
 ```
-$ python3.11 -m venv venv
+$ python3 -m venv venv
 $ . ./venv/bin/activate
 $ pip3 install -r requirements.txt
 ```
@@ -73,7 +73,7 @@ drwxr-xr-x. 3 root root 43 Jul 31 01:08 /local-data/
 
 - Start the Flask application in development mode
 ```
-$ export REDIS_OM_URL=redis://default:@localhost:6379
+$ export REDIS_OM_URL=redis://default:shorturl@localhost:10001
 $ export SHORT_KEY_PREFIX=http://127.0.0.1:5000/
 $ export FLASK_ENV=development
 $ flask run

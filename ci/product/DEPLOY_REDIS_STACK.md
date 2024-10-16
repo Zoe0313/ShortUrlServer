@@ -7,7 +7,7 @@ cd Redis-Stack-Bitnami-Helm-Chart/
 helm install redis-stack-server . -n vsanperf-shorturl  --debug
 ```
 
-After installing, we got below infomations:
+After installing, we got below infomations of redis on production:
 ```
 NOTES:
 CHART NAME: redis
@@ -24,7 +24,7 @@ Redis&reg; can be accessed on the following DNS names from within your cluster:
 To get your password run:
 
     export REDIS_PASSWORD=$(kubectl get secret --namespace vsanperf-shorturl redis-stack-server -o jsonpath="{.data.redis-password}" | base64 -d)
-
+    3QObQYiaGc
 To connect to your Redis&reg; server:
 
 1. Run a Redis&reg; pod that you can use as a client:
@@ -99,4 +99,44 @@ redis-stack-server-master.vsanperf-shorturl.svc.cluster.local:6379> keys *
 Delete redis-stack-server by helm:
 ```
 helm uninstall redis-stack-server . -n vsanperf-shorturl
+helm uninstall redis-stack-server . -n vsandevstg-shorturl
+```
+
+Below is the infomations of redis on staging:
+```
+NOTES:
+CHART NAME: redis
+CHART VERSION: 17.11.7
+APP VERSION: 7.0.11
+
+** Please be patient while the chart is being deployed **
+
+Redis&reg; can be accessed on the following DNS names from within your cluster:
+
+    redis-stack-server-master.vsandevstg-shorturl.svc.cluster.local for read/write operations (port 6379)
+    redis-stack-server-replicas.vsandevstg-shorturl.svc.cluster.local for read-only operations (port 6379)
+
+To get your password run:
+
+    export REDIS_PASSWORD=$(kubectl get secret --namespace vsandevstg-shorturl redis-stack-server -o jsonpath="{.data.redis-password}" | base64 -d)
+    3QObQYiaGc
+To connect to your Redis&reg; server:
+
+1. Run a Redis&reg; pod that you can use as a client:
+
+   kubectl run --namespace vsandevstg-shorturl redis-client --restart='Never'  --env REDIS_PASSWORD=$REDIS_PASSWORD  --image vsaninternaltools-docker-local.usw5.packages.broadcom.com/product/slackbot/redis-stack:latest --command -- sleep infinity
+
+   Use the following command to attach to the pod:
+
+   kubectl exec --tty -i redis-client --namespace vsandevstg-shorturl -- bash
+
+2. Connect using the Redis&reg; CLI:
+   REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli -h redis-stack-server-master
+   REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli -h redis-stack-server-replicas
+
+To connect to your database from outside the cluster execute the following commands:
+
+    kubectl port-forward --namespace vsandevstg-shorturl svc/redis-stack-server-master 6379:6379 &
+    REDISCLI_AUTH="$REDIS_PASSWORD" redis-cli -h 127.0.0.1 -p 6379
+
 ```

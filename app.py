@@ -1,7 +1,7 @@
 from flask import Flask, request, redirect, jsonify, abort, render_template, make_response
 
-import json
-import datetime
+import functools
+import time
 from nanoid import generate
 
 from redis_om import Migrator
@@ -19,6 +19,19 @@ ROUTE_NAME = ('shorten', 'swagger', )
 app = Flask(__name__)
 initSwaggerUI(app)
 logger = initLogger()
+app.logger.handlers = logger.handlers
+app.logger.setLevel(logger.level)
+
+def logExecutionTime(func):
+   @functools.wraps(func)
+   def wrapper(*args, **kwargs):
+      startTime = time.perf_counter()
+      res = func(*args, **kwargs)
+      endTime = time.perf_counter()
+      output = '[{}] took {:.3f}s'.format(func.__name__, endTime - startTime)
+      logger.info(output)
+      return res
+   return wrapper
 
 @app.route('/')
 @app.route('/shorten', methods=['GET'])
@@ -65,6 +78,7 @@ def redirectUrl(shortKey):
     url = results[0]
     longUrl = url.original_url
     url.utilization = url.utilization + 1
+    url.lastRedirectTime = datetime.datetime.utcnow()
     url.save()
     return redirect(longUrl)
 
@@ -107,9 +121,11 @@ def shortenUrl():
         return jsonify(short_url=shortUrl, long_url=originalUrl, url_id=urlId)
     except ValidationError as e:
         error = 'Validation error: ' + str(e)
+        logger.error(error)
         return abort(make_response(jsonify(message=error), 500))
     except Exception as e:
         error = 'Internal error: ' + str(e)
+        logger.error(error)
         return abort(make_response(jsonify(message=error), 500))
    
 @app.route('/api/url/<id>', methods=['GET'])
@@ -128,7 +144,6 @@ def deleteById(id):
     try:
         ret = Url.delete(id)
         # Delete returns 1 if the url existed and was deleted, or 0 if they didn't exist.
-        app.logger.info(f'delete url {id}: {ret}')
         return jsonify('ok')
     except NotFoundError:
         error = 'Not found by url id: ' + id
@@ -141,7 +156,7 @@ def updateById(id):
     except NotFoundError:
         error = 'Not found by url id: ' + id
         return abort(make_response(jsonify(message=error), 404))
-    
+
     try:
         data = json.loads(request.data.decode())
         originalUrl = data['original_url']
@@ -158,10 +173,11 @@ def updateById(id):
         return jsonify(short_url=shortUrl, long_url=url.original_url, url_id=url.pk)
     except ValidationError as e:
         error = 'Validation error: ' + str(e)
-        app.logger.error(error)
+        logger.error(error)
         return abort(make_response(jsonify(message=error), 500))
     except Exception as e:
         error = 'Internal error: ' + str(e)
+        logger.error(error)
         return abort(make_response(jsonify(message=error), 500))
     
 @app.route('/api/longurl', methods=['GET'])
@@ -183,7 +199,7 @@ def queryByLongurl():
         error = 'Not found by long url: ' + longUrl
         return abort(make_response(jsonify(message=error), 404))
 
-    app.logger.debug(f'Hash value "{hash_value}" found {len(datas)} records')
+    logger.debug(f'Hash value "{hash_value}" found {len(datas)} records')
     return build_results(datas)
 
 @app.route('/api/longurl', methods=['POST'])
@@ -214,18 +230,20 @@ def updateLongurlByShortkey():
 
     try:
         url = urls[0]
-        app.logger.debug(url)
+        logger.debug(url)
         url.original_url = originalUrl
         url.hash_original = url2hash(originalUrl)
         url.save()
         shortUrl = SHORT_KEY_PREFIX + url.short_key
+        logger.debug(f'The long url of "{shortUrl}" updated into {originalUrl}.')
         return jsonify(short_url=shortUrl, long_url=url.original_url, url_id=url.pk)
     except ValidationError as e:
         error = 'Validation error: ' + str(e)
-        app.logger.error(error)
+        logger.error(error)
         return abort(make_response(jsonify(message=error), 500))
     except Exception as e:
         error = 'Internal error: ' + str(e)
+        logger.error(error)
         return abort(make_response(jsonify(message=error), 500))
 
 @app.route('/api/shortkey/<shortKey>', methods=['GET'])
@@ -253,14 +271,14 @@ def updateShortkeyById(id, shortKey):
 
     try:
         url = Url.get(id)
-        app.logger.debug(url)
+        logger.debug(url)
         url.short_key = shortKey
         url.save()
         shortUrl = SHORT_KEY_PREFIX + url.short_key
         return jsonify(short_url=shortUrl, long_url=url.original_url, url_id=url.pk)
     except ValidationError as e:
         error = 'Validation error: ' + str(e)
-        app.logger.error(error)
+        logger.error(error)
         return abort(make_response(jsonify(message=error), 500))
     except NotFoundError:
         error = 'Not found by url id: ' + id
@@ -276,7 +294,7 @@ def queryByUser():
         (Url.user_id == user)
     ).all()
     datas.sort(reverse=True)
-    app.logger.info(f'User "{user}" has {len(datas)} urls')
+    logger.info(f'User "{user}" has {len(datas)} urls')
     return build_results(datas)
 
 def build_results(urls):
@@ -294,19 +312,20 @@ def find_by_shortkey(shortKey):
         ).all()
     except NotFoundError:
         datas = []
-    app.logger.info(f'Short key "{shortKey}" found {len(datas)} records')
+    logger.info(f'Short key "{shortKey}" found {len(datas)} records')
     return datas
 
 def create_url(short_key, long_url, expire_time, user_id):
-    now = datetime.date.today()
+    now = datetime.datetime.utcnow().date()
     hash_value = url2hash(long_url)
     new_url = Url(original_url=long_url, hash_original=hash_value, short_key=short_key, 
                   expire_time=expire_time, create_at=now, user_id=user_id)
     new_url.save()
     if expire_time is not None:
         delta_second = (expire_time - now).days * 24 * 3600
-        app.logger.info(f'Set expire time {delta_second} seconds for short key {short_key}')
+        logger.info(f'Set expire time {delta_second} seconds for short key {short_key}')
         new_url.expire(delta_second)
+    logger.info(f'Create short url: {new_url.dict()}')
     return new_url.pk
 
 def generate_shorturl(user_id, original_url, short_key, expire_time):
@@ -329,4 +348,4 @@ def generate_shorturl(user_id, original_url, short_key, expire_time):
 # Create a RedisSearch index for instances of the Url model.
 Migrator().run()
 
-app.logger.info(f"Connect to redis uri: {REDIS_OM_URL}")
+logger.info(f"Connect to redis uri: {REDIS_OM_URL}")

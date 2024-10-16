@@ -20,4 +20,5 @@ class Url(JsonModel):
     expire_time: Optional[datetime.date] = None
     user_id: Optional[str] = Field(index=True)
     utilization: Optional[int] = 0
+    lastRedirectTime: Optional[datetime.datetime] = None
     # email: EmailStr
