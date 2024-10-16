@@ -10,22 +10,20 @@ utils.py
 import datetime
 from dateutil import relativedelta
 import hashlib
-import base64
 import re
 from urllib.parse import urlparse
-import functools
-import time
 
 def type2date(expireType):
     date = None
+    today = datetime.datetime.utcnow().date()
     if expireType == '1month':
-        date = datetime.date.today() + relativedelta.relativedelta(months=1)
+        date = today + relativedelta.relativedelta(months=1)
     elif expireType == '3month':
-        date = datetime.date.today() + relativedelta.relativedelta(months=3)
+        date = today + relativedelta.relativedelta(months=3)
     elif expireType == '6month':
-        date = datetime.date.today() + relativedelta.relativedelta(months=6)
+        date = today + relativedelta.relativedelta(months=6)
     elif expireType == '1year':
-        date = datetime.date.today() + relativedelta.relativedelta(years=1)
+        date = today + relativedelta.relativedelta(years=1)
     elif expireType == 'indefinitely':
         date = None
     return date
@@ -40,27 +38,8 @@ def validateUrl(url):
     if len(result.scheme) == 0 or len(result.netloc) == 0:
         raise Exception("Please follow the syntax specifications in RFC 1808 to input url")
 
-def checkBroadcomUrlAccess(url):
-    result = urlparse(url)
-    if 'broadcom' in result.netloc:
-        try:
-            requests.get(url, timeout=5)
-        except:
-            return "Maybe the short url couldn't redirect to the BC url currently."
-    return ""
-
 def url2hash(url: str) -> str:
     hash_object = hashlib.sha256(url.encode())
     hash_hex = hash_object.hexdigest()
     return hash_hex
 
-def logExecutionTime(func):
-   @functools.wraps(func)
-   def wrapper(*args, **kwargs):
-      startTime = time.perf_counter()
-      res = func(*args, **kwargs)
-      endTime = time.perf_counter()
-      output = '[{}] took {:.3f}s'.format(func.__name__, endTime - startTime)
-      print(output)
-      return res
-   return wrapper

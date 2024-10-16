@@ -26,15 +26,18 @@ def createMailHandler():
    return mail_handler
 
 def initLogger():
-   logging.basicConfig(filename='url-shortener.log', level=logging.INFO,
-                       format='%(asctime)s %(levelname)s %(name)s %(threadName)s : %(message)s')
-   logger = logging.getLogger()
-   file_handler = logging.FileHandler('url-shortener.log')
-   file_handler.setLevel(logging.INFO)
-   formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-   file_handler.setFormatter(formatter)
-   logger.addHandler(file_handler)
-   logger.addHandler(default_handler)
-   mail_handler = createMailHandler()
-   logger.addHandler(mail_handler)
-   return logger
+    logger = logging.getLogger('myLogger')  # my logger
+    logger.setLevel(logging.INFO)
+    if not logger.hasHandlers():
+        file_handler = logging.FileHandler('url-shortener.log')
+        file_handler.setLevel(logging.INFO)
+        file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(file_formatter)
+        logger.addHandler(file_handler)
+        
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.INFO)
+        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        console_handler.setFormatter(formatter)
+        logger.addHandler(console_handler)
+    return logger

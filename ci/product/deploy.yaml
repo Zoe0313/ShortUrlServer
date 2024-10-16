@@ -20,7 +20,7 @@ spec:
         fsGroup: 201
       containers:
         - name: url-shortener
-          image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/product/slackbot/url-shortener:vdp
+          image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/product/shorturl/server-prd:latest
           env:
             - name: STAGE
               value: "product"
