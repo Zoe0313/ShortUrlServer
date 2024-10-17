@@ -19,8 +19,8 @@ ROUTE_NAME = ('shorten', 'swagger', )
 app = Flask(__name__)
 initSwaggerUI(app)
 logger = initLogger()
-app.logger.handlers = logger.handlers
-app.logger.setLevel(logger.level)
+logger.handlers = logger.handlers
+logger.setLevel(logger.level)
 
 def logExecutionTime(func):
    @functools.wraps(func)
