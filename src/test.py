@@ -128,8 +128,8 @@ if __name__ == "__main__":
     testUser = 'lzoe'
     clearAll(testUser)
     # create a short url by customized short key
-    testUrl = 'https://confluence.eng.vmware.com/pages/viewpage.action?spaceKey=SABU&title=vSAN+Slackbot+Notification+Service'
-    testShortkey = 'vsan-bot'
+    testUrl = 'https://vmw-confluence.broadcom.net/pages/editpage.action?pageId=2020706536'
+    testShortkey = 'dogfooding'
     testExp = '1month'
     result = get_short_url(testUrl, testShortkey, testExp, testUser)
     shortUrl = result['short_url']
@@ -137,15 +137,15 @@ if __name__ == "__main__":
     print(urlId)
     redirect_by_short_url(shortUrl)
     # update the long url by short key
-    testAnotherUrl = 'https://confluence.eng.vmware.com/display/SABU/vSAN+Short+URL+Service'
+    testAnotherUrl = 'https://vmw-confluence.broadcom.net/display/SABU/vSAN+Short+URL+Service'
     update_longurl_by_shortkey(testShortkey, testAnotherUrl)
     redirect_by_short_url(shortUrl)
     # update the long url by url id
-    testAnotherUrl = 'https://vmpool.eng.vmware.com/dashboard/pools'
+    testAnotherUrl = 'https://lvn-dbc2443.lvn.broadcom.net/js032470/public_html/'
     update_longurl_by_id(urlId, testAnotherUrl)
     redirect_by_short_url(shortUrl)
     # update short key by url id
-    testAnotherShortkey = 'vsan-short-url'
+    testAnotherShortkey = 'lvn-dbc-js'
     result = update_shortkey_by_id(urlId, testAnotherShortkey)
     shortUrl = result['short_url']
     redirect_by_short_url(shortUrl)

@@ -7,11 +7,11 @@ Module docstring.
 logger.py
 '''
 
-import datetime
 import logging
 import logging.handlers
 import os
-from flask.logging import default_handler
+
+LOG_FORMAT = "%(asctime)s - %(levelname)s - %(filename)s[:%(lineno)d] - %(message)s"
 
 def createMailHandler():
    mail_handler = logging.handlers.SMTPHandler(
@@ -22,22 +22,24 @@ def createMailHandler():
        credentials=("xiaoxia.liu@broadcom.com", "wakk txlp quul jtmk")
    )
    mail_handler.setLevel(logging.ERROR)
-   mail_handler.setFormatter(logging.Formatter('[%(asctime)s] %(levelname)s in %(module)s: %(message)s'))
+   mail_handler.setFormatter(logging.Formatter(LOG_FORMAT))
    return mail_handler
 
 def initLogger():
-    logger = logging.getLogger('myLogger')  # my logger
+    if os.environ.get('STAGE') == 'product':
+        logFile = 'shorturl-service-prd.log'
+    else:
+        logFile = 'shorturl-service-stg.log'
+    dirPath = os.path.join(os.path.abspath(__file__).split("/src")[0], 'persist')
+    os.makedirs(dirPath, exist_ok=True)
+    logFile = os.path.join(dirPath, logFile)
+    
+    logger = logging.getLogger('mylogger')
     logger.setLevel(logging.INFO)
-    if not logger.hasHandlers():
-        file_handler = logging.FileHandler('url-shortener.log')
-        file_handler.setLevel(logging.INFO)
-        file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        file_handler.setFormatter(file_formatter)
-        logger.addHandler(file_handler)
-        
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        console_handler.setFormatter(formatter)
-        logger.addHandler(console_handler)
+    handler = logging.handlers.TimedRotatingFileHandler(logFile, when='midnight', interval=1, backupCount=7)
+    formatter = logging.Formatter(fmt=LOG_FORMAT)
+    formatter.default_time_format = '%Y-%m-%dT%H:%M:%S'
+    formatter.default_msec_format = '%s.%03d'
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
     return logger
