@@ -1,0 +1,38 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: one-test
+  namespace: vsanperf-shorturl
+spec:
+  backoffLimit: 0
+  ttlSecondsAfterFinished: 100
+  activeDeadlineSeconds: 800
+  template:
+    spec:
+      securityContext:
+        runAsUser: 175345366
+        runAsGroup: 201
+        fsGroup: 201
+      containers:
+      - name: one-test
+        image: vsaninternaltools-docker-local.artifactory.vcfd.broadcom.net/product/shorturl/database_backup:vdp
+        imagePullPolicy: Always
+        command: ["/bin/bash", "-c"]
+        args:
+          - cd /url-shortener; python3 cronjob/redis_backup.py;
+        resources:
+          requests:
+            memory: "64Mi"
+            cpu: "20m"
+          limits:
+            memory: "256Mi"
+            cpu: "300m"
+        volumeMounts:
+        - name: lvn-dbc2403
+          mountPath: /url-shortener/backup
+      restartPolicy: OnFailure
+      volumes:
+      - name: lvn-dbc2403
+        nfs:
+          server: lvn-dbc2403.lvn.broadcom.net
+          path: /dbc/lvn-dbc2403/xl061876/public_html/url-shortener/database-backup
