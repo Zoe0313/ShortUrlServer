@@ -143,27 +143,47 @@ Warning: Using a password with '-a' or '-u' option on the command line interface
 ```
 
 - Simple commands in Redis
-1. Show all keys
-```
-keys *
-```
-2. Show all existing indexes
-```
-FT._LIST
-```
-3. Query all keys and delete one
+1. Query all keys
 ```
 127.0.0.1:6379> keys *
 ...
-196) ":schema.Url:01J3Q70RMA08YRW23R5AXNK1CG"
-197) ":schema.Url:01J34D8KBFXA6HQZXK9CT3E6V0"
-localhost:6379> DEL key :schema.Url:01J3Q70RMA08YRW23R5AXNK1CG
+196) ":src.schema.Url:01J3Q70RMA08YRW23R5AXNK1CG"
+197) ":src.schema.Url:01J34D8KBFXA6HQZXK9CT3E6V0"
+```
+2. Delete one key
+```
+localhost:6379> DEL key :src.schema.Url:01J3Q70RMA08YRW23R5AXNK1CG
 (integer) 1
 127.0.0.1:6379> keys *
 ...
-196) ":schema.Url:01J34D8KBFXA6HQZXK9CT3E6V0"
+196) ":src.schema.Url:01J34D8KBFXA6HQZXK9CT3E6V0"
 ```
-4. Query all indexes and delete deactivated one
+3. Show all existing indexes
+```
+localhost:10001> FT._LIST
+1) :src.schema.Url:index
+```
+4. Search by condition (Only fields with index=True can be used for searching.)
+(1) Search by short_key:
+```
+localhost:10001> FT.SEARCH :src.schema.Url:index "@short_key:{omqjb}"
+1) (integer) 1
+2) ":src.schema.Url:01JAC8TR5R16A50HYQZJ2TS2B3"
+3) 1) "$"
+   2) "{\"pk\":\"01JAC8TR5R16A50HYQZJ2TS2B3\",\"original_url\":\"https://vmw-confluence.broadcom.net/pages/createpage.action?spaceKey=SABU&fromPageId=2035468461\",\"hash_original\":\"11391bb4b78ac4b0228a850a863af988450a3edc793379ae85fa9fdad17de3b2\",\"short_key\":\"omqjb\",\"create_at\":\"2024-10-17\",\"expire_time\":\"2024-11-17\",\"user_id\":\"\",\"utilization\":1,\"lastRedirectTime\":\"2024-10-17T03:37:41.597941\"}"
+```
+(2) Search by user_id:
+```
+localhost:10001> FT.SEARCH :src.schema.Url:index "@user_id:{lzoe}"
+1) (integer) 2
+2) ":src.schema.Url:01JAYQA556Z0ZEKDYBZ720AGWF"
+3) 1) "$"
+   2) "{\"pk\":\"01JAYQA556Z0ZEKDYBZ720AGWF\",\"original_url\":\"https://vmw-confluence.broadcom.net/display/SABU/Service+release+track+and+meeting+minutes\",\"hash_original\":\"d4307517413f0f087dbf77aaff6f651da74dde90b5e834abc00fefcb745fd142\",\"short_key\":\"meetingnotes\",\"create_at\":\"2024-10-24\",\"expire_time\":\"2024-11-24\",\"user_id\":\"lzoe\",\"utilization\":1,\"lastRedirectTime\":\"2024-10-24T07:36:59.822011\"}"
+4) ":src.schema.Url:01JAYQBF8FS7ZF3ST72FHQ6V9J"
+5) 1) "$"
+   2) "{\"pk\":\"01JAYQBF8FS7ZF3ST72FHQ6V9J\",\"original_url\":\"https://vmw-confluence.broadcom.net/display/vSANSHQE/Telemetry+Test+for+Global+Dedup\",\"hash_original\":\"b2b41c8a795d17cb37c3367b7951d145a218df887e20d842c1c77f9f41108ae3\",\"short_key\":\"globaldedup\",\"create_at\":\"2024-10-24\",\"expire_time\":\"2024-11-24\",\"user_id\":\"lzoe\",\"utilization\":1,\"lastRedirectTime\":\"2024-10-24T07:37:42.941665\"}"
+```
+5. Delete index
 ```
 localhost:6379> FT._LIST
 1) :src.schema.Url:index

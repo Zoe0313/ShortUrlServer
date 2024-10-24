@@ -128,8 +128,8 @@ if __name__ == "__main__":
     testUser = 'lzoe'
     clearAll(testUser)
     # create a short url by customized short key
-    testUrl = 'https://vmw-confluence.broadcom.net/pages/editpage.action?pageId=2020706536'
-    testShortkey = 'dogfooding'
+    testUrl = 'https://vmw-confluence.broadcom.net/display/vSANSHQE/Telemetry+Test+for+Global+Dedup'
+    testShortkey = 'globaldedup'
     testExp = '1month'
     result = get_short_url(testUrl, testShortkey, testExp, testUser)
     shortUrl = result['short_url']
