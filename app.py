@@ -61,6 +61,14 @@ def checkSystemAdmin(user):
         return jsonify('ok')
     return abort(make_response(jsonify(message=f'User "{user}" is not admin.'), 400))
 
+@app.route('/api/service/status', methods=['GET'])
+def checkServiceStatus():
+    urls = Url.find().all()
+    filtered_urls = [data for data in urls if data.user_id != "lzoe"]
+    number_of_urls = len(filtered_urls)
+    redirect_times = sum(url.utilization for url in filtered_urls if url.utilization is not None)
+    return jsonify(number_of_urls=number_of_urls, redirect_times=redirect_times)
+
 @app.route('/<shortKey>', methods=['GET'])
 @logExecutionTime
 def redirectUrl(shortKey):
