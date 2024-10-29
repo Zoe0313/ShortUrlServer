@@ -1,4 +1,5 @@
 from flask import Flask, request, redirect, jsonify, abort, render_template, make_response
+from flask import send_from_directory
 
 import functools
 import time
@@ -55,6 +56,12 @@ def isShortkeyExist(shortKey):
     results = find_by_shortkey(shortKey)
     return len(results) > 0
 
+# @app.route('/static/<path:filename>')
+# def send_static(filename):
+#     response = send_from_directory('static', filename)
+#     response.cache_control.max_age = 3600  # 设置缓存时间，单位为秒
+#     return response
+
 @app.route('/api/service/admin/<user>', methods=['GET'])
 def checkSystemAdmin(user):
     if user in ADMIN_USER_ID:
@@ -64,10 +71,16 @@ def checkSystemAdmin(user):
 @app.route('/api/service/status', methods=['GET'])
 def checkServiceStatus():
     urls = Url.find().all()
+    # overall
     filtered_urls = [data for data in urls if data.user_id != "lzoe"]
-    number_of_urls = len(filtered_urls)
-    redirect_times = sum(url.utilization for url in filtered_urls if url.utilization is not None)
-    return jsonify(number_of_urls=number_of_urls, redirect_times=redirect_times)
+    total_number_of_urls = len(filtered_urls)
+    total_redirect_times = sum(url.utilization for url in filtered_urls if url.utilization is not None)
+    # user's url
+    filtered_user_urls = [data for data in filtered_urls if data.user_id != "svc.vsan-er"]
+    number_of_user_urls = len(filtered_user_urls)
+    redirect_times_of_user_urls = sum(url.utilization for url in filtered_user_urls if url.utilization is not None)
+    return jsonify(number_of_overall_urls=total_number_of_urls, overall_redirect_times=total_redirect_times,
+                   number_of_user_urls=number_of_user_urls, user_redirect_times=redirect_times_of_user_urls)
 
 @app.route('/<shortKey>', methods=['GET'])
 @logExecutionTime
