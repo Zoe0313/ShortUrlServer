@@ -1,5 +1,4 @@
 from flask import Flask, request, redirect, jsonify, abort, render_template, make_response
-from flask import send_from_directory
 
 import functools
 import time
@@ -55,12 +54,6 @@ def isShortkeyExist(shortKey):
     # check the short URL in use or not
     results = find_by_shortkey(shortKey)
     return len(results) > 0
-
-# @app.route('/static/<path:filename>')
-# def send_static(filename):
-#     response = send_from_directory('static', filename)
-#     response.cache_control.max_age = 3600  # 设置缓存时间，单位为秒
-#     return response
 
 @app.route('/api/service/admin/<user>', methods=['GET'])
 def checkSystemAdmin(user):
