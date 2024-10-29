@@ -249,7 +249,7 @@ def updateLongurlByShortkey():
         url.hash_original = url2hash(originalUrl)
         url.save()
         shortUrl = SHORT_KEY_PREFIX + url.short_key
-        logger.debug(f'The long url of "{shortUrl}" updated into {originalUrl}.')
+        logger.info(f'The long url of "{shortUrl}" updated into {originalUrl}.')
         return jsonify(short_url=shortUrl, long_url=url.original_url, url_id=url.pk)
     except ValidationError as e:
         error = 'Validation error: ' + str(e)
