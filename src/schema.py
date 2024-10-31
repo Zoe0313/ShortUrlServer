@@ -16,7 +16,7 @@ class Url(JsonModel):
     original_url: str
     hash_original: str = Field(index=True)
     short_key: str = Field(index=True)
-    create_at: datetime.date
+    create_at: datetime.date = Field(index=True)
     expire_time: Optional[datetime.date] = None
     user_id: Optional[str] = Field(index=True)
     utilization: Optional[int] = 0
