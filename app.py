@@ -71,9 +71,37 @@ def checkServiceStatus():
     # user's url
     filtered_user_urls = [data for data in filtered_urls if data.user_id != "svc.vsan-er"]
     number_of_user_urls = len(filtered_user_urls)
-    redirect_times_of_user_urls = sum(url.utilization for url in filtered_user_urls if url.utilization is not None)
-    return jsonify(number_of_overall_urls=total_number_of_urls, overall_redirect_times=total_redirect_times,
-                   number_of_user_urls=number_of_user_urls, user_redirect_times=redirect_times_of_user_urls)
+    number_of_bot_urls = total_number_of_urls - number_of_user_urls
+    # url which redirect time is 0
+    not_redirect_urls = [data for data in filtered_urls if data.utilization == 0]
+    number_of_not_redirect_urls = len(not_redirect_urls)
+    return jsonify(number_of_overall_urls=total_number_of_urls,
+                   overall_redirect_times=total_redirect_times,
+                   number_of_user_urls=number_of_user_urls,
+                   number_of_bot_urls=number_of_bot_urls,
+                   number_of_not_redirect_urls=number_of_not_redirect_urls)
+
+@app.route('/api/url/deprecated/analyze/<days>', methods=['GET'])
+def analyzeUrl(days):
+    try:
+        days_ago = datetime.datetime.utcnow().date() - datetime.timedelta(days=int(days))
+        days_ago_time = datetime.datetime.utcnow() - datetime.timedelta(days=int(days))
+    except:
+        return abort(make_response(jsonify(message='Bad request'), 400))
+    logger.info(f'Analyze {days_ago} ago the urls redirect times and last redirect time.')
+    urls = Url.find().all()
+    unused_urls = [data for data in urls if data.utilization == 0 and data.create_at <= days_ago]
+    recently_unused_urls = [data for data in urls if data.utilization > 0 and data.lastRedirectTime != None and data.lastRedirectTime <= days_ago_time]
+    
+    result = build_results(unused_urls)
+    unused_url_result = result["results"]
+    
+    result = build_results(recently_unused_urls)
+    recently_unused_url_result = result["results"]
+    
+    return jsonify(number_of_unused_urls=len(unused_urls), unused_urls=unused_url_result,
+                   number_of_recently_unused_urls=len(recently_unused_urls),
+                   recently_unused_urls=recently_unused_url_result)
 
 @app.route('/<shortKey>', methods=['GET'])
 @logExecutionTime
