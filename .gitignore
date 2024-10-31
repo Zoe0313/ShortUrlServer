@@ -6,5 +6,6 @@
 *.rdb
 
 venv/
+persist/
 
 .DS_Store
