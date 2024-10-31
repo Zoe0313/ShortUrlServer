@@ -66,20 +66,30 @@ def checkServiceStatus():
     urls = Url.find().all()
     # overall
     filtered_urls = [data for data in urls if data.user_id != "lzoe"]
+    redirect_urls = [data for data in filtered_urls if data.utilization > 0]
     total_number_of_urls = len(filtered_urls)
+    total_number_of_redirect_urls = len(redirect_urls)
     total_redirect_times = sum(url.utilization for url in filtered_urls if url.utilization is not None)
-    # user's url
+    # users
     filtered_user_urls = [data for data in filtered_urls if data.user_id != "svc.vsan-er"]
-    number_of_user_urls = len(filtered_user_urls)
-    number_of_bot_urls = total_number_of_urls - number_of_user_urls
-    # url which redirect time is 0
-    not_redirect_urls = [data for data in filtered_urls if data.utilization == 0]
-    number_of_not_redirect_urls = len(not_redirect_urls)
+    redirect_user_urls = [data for data in filtered_user_urls if data.utilization > 0]
+    user_data = {
+        "number_of_urls": len(filtered_user_urls),
+        "number_of_redirected_urls": len(redirect_user_urls),
+        "redirect_times": sum(url.utilization for url in filtered_user_urls if url.utilization is not None)
+    }
+    # bot
+    filtered_bot_urls = [data for data in filtered_urls if data.user_id == "svc.vsan-er"]
+    redirect_bot_urls = [data for data in filtered_bot_urls if data.utilization > 0]
+    bot_data = {
+        "number_of_urls": len(filtered_bot_urls),
+        "number_of_redirected_urls": len(redirect_bot_urls),
+        "redirect_times": sum(url.utilization for url in filtered_bot_urls if url.utilization is not None)
+    }
     return jsonify(number_of_overall_urls=total_number_of_urls,
                    overall_redirect_times=total_redirect_times,
-                   number_of_user_urls=number_of_user_urls,
-                   number_of_bot_urls=number_of_bot_urls,
-                   number_of_not_redirect_urls=number_of_not_redirect_urls)
+                   number_of_overall_redirected_urls=total_number_of_redirect_urls,
+                   user=user_data, bot=bot_data)
 
 @app.route('/api/url/deprecated/analyze/<days>', methods=['GET'])
 def analyzeUrl(days):
