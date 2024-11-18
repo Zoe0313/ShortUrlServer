@@ -91,6 +91,19 @@ def checkServiceStatus():
                    number_of_overall_redirected_urls=total_number_of_redirect_urls,
                    user=user_data, bot=bot_data)
 
+@app.route('/api/url/latest/create/<days>', methods=['GET'])
+def latestCreateUrl(days):
+    try:
+        days_ago = datetime.datetime.utcnow().date() - datetime.timedelta(days=int(days))
+    except:
+        return abort(make_response(jsonify(message='Bad request'), 400))
+    urls = Url.find().all()
+    latest_created_urls = [data for data in urls if data.create_at >= days_ago]
+    result = build_results(latest_created_urls)
+    latest_created_url_result = result["results"]
+    return jsonify(number_of_created_urls=len(latest_created_urls),
+                   latest_created_urls=latest_created_url_result)
+
 @app.route('/api/url/deprecated/analyze/<days>', methods=['GET'])
 def analyzeUrl(days):
     try:
