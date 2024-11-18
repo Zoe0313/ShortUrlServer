@@ -132,6 +132,7 @@ def redirectUrl(shortKey):
     url.utilization = url.utilization + 1
     url.lastRedirectTime = datetime.datetime.utcnow()
     url.save()
+    logger.info(f'Redirect by short key {shortKey}.')
     return redirect(longUrl)
 
 @app.route('/api/shorten', methods=['POST'])
@@ -170,6 +171,7 @@ def shortenUrl():
 
     try:
         shortUrl, urlId = generate_shorturl(userId, originalUrl, shortKey, expireTime)
+        logger.info(f'Generate short url: {shortUrl}.')
         return jsonify(short_url=shortUrl, long_url=originalUrl, url_id=urlId)
     except ValidationError as e:
         error = 'Validation error: ' + str(e)
@@ -185,7 +187,9 @@ def findById(id):
     try:
         url = Url.get(id)
         result = url.dict()
-        result.update({'short_url': SHORT_KEY_PREFIX + result['short_key']})
+        shortKey = result['short_key']
+        result.update({'short_url': SHORT_KEY_PREFIX + shortKey})
+        logger.info(f'Found short key {shortKey} by id: {id}.')
         return result
     except NotFoundError:
         error = 'Not found by url id: ' + id
@@ -196,6 +200,7 @@ def deleteById(id):
     try:
         ret = Url.delete(id)
         # Delete returns 1 if the url existed and was deleted, or 0 if they didn't exist.
+        logger.info(f'Delete short url by id: {id}.')
         return jsonify('ok')
     except NotFoundError:
         error = 'Not found by url id: ' + id
@@ -222,6 +227,7 @@ def updateById(id):
         url.hash_original = url2hash(originalUrl)
         url.save()
         shortUrl = SHORT_KEY_PREFIX + url.short_key
+        logger.info(f'Update short url {shortUrl} by id: {id}.')
         return jsonify(short_url=shortUrl, long_url=url.original_url, url_id=url.pk)
     except ValidationError as e:
         error = 'Validation error: ' + str(e)
@@ -327,6 +333,7 @@ def updateShortkeyById(id, shortKey):
         url.short_key = shortKey
         url.save()
         shortUrl = SHORT_KEY_PREFIX + url.short_key
+        logger.info(f'Update short key {shortKey} by id: {id}.')
         return jsonify(short_url=shortUrl, long_url=url.original_url, url_id=url.pk)
     except ValidationError as e:
         error = 'Validation error: ' + str(e)

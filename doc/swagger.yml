@@ -155,52 +155,52 @@ paths:
           description: Internal Error
           schema:
             $ref: '#/definitions/HTTPError'
-  /api/url/{id}:
-    get:
-      summary: Fetch one short url detail by id
-      tags:
-        - public
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: id
-          required: true
-          type: string
-          example: 01J3MFXQB7NPF7WVQ6CFTB4Z7W
-          description: The uuid of short url
-      responses:
-        200:
-          description: The details of short url
-          schema:
-            $ref: '#/definitions/UrlDetail'
-        404:
-          description: Not found
-          schema:
-            $ref: '#/definitions/HTTPError'
-    delete:
-      summary: Delete one short url by id
-      tags:
-        - public
-      produces:
-        - application/json
-      parameters:
-        - in: path
-          name: id
-          required: true
-          type: string
-          example: 01J3MFXQB7NPF7WVQ6CFTB4Z7W
-          description: The uuid of short url
-      responses:
-        200:
-          description: The short url deleted.
-          schema:
-            type: string
-            example: ok
-        404:
-          description: Not found
-          schema:
-            $ref: '#/definitions/HTTPError'
+#  /api/url/{id}:
+#    get:
+#      summary: Fetch one short url detail by id
+#      tags:
+#        - public
+#      produces:
+#        - application/json
+#      parameters:
+#        - in: path
+#          name: id
+#          required: true
+#          type: string
+#          example: 01J3MFXQB7NPF7WVQ6CFTB4Z7W
+#          description: The uuid of short url
+#      responses:
+#        200:
+#          description: The details of short url
+#          schema:
+#            $ref: '#/definitions/UrlDetail'
+#        404:
+#          description: Not found
+#          schema:
+#            $ref: '#/definitions/HTTPError'
+#    delete:
+#      summary: Delete one short url by id
+#      tags:
+#        - public
+#      produces:
+#        - application/json
+#      parameters:
+#        - in: path
+#          name: id
+#          required: true
+#          type: string
+#          example: 01J3MFXQB7NPF7WVQ6CFTB4Z7W
+#          description: The uuid of short url
+#      responses:
+#        200:
+#          description: The short url deleted.
+#          schema:
+#            type: string
+#            example: ok
+#        404:
+#          description: Not found
+#          schema:
+#            $ref: '#/definitions/HTTPError'
   /api/longurl:
     get:
       summary: Query url infos by long url
