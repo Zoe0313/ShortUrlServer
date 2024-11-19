@@ -26,20 +26,24 @@ def createMailHandler():
    return mail_handler
 
 def initLogger():
-    if os.environ.get('STAGE') == 'product':
-        logFile = 'shorturl-service-prd.log'
-    else:
-        logFile = 'shorturl-service-stg.log'
-    dirPath = os.path.join(os.path.abspath(__file__).split("/src")[0], 'persist')
-    os.makedirs(dirPath, exist_ok=True)
-    logFile = os.path.join(dirPath, logFile)
-    
     logger = logging.getLogger('mylogger')
     logger.setLevel(logging.INFO)
-    handler = logging.handlers.TimedRotatingFileHandler(logFile, when='midnight', interval=1, backupCount=7)
-    formatter = logging.Formatter(fmt=LOG_FORMAT)
-    formatter.default_time_format = '%Y-%m-%dT%H:%M:%S'
-    formatter.default_msec_format = '%s.%03d'
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+
+    if not logger.handlers:
+        formatter = logging.Formatter(fmt=LOG_FORMAT)
+        formatter.default_time_format = '%Y-%m-%dT%H:%M:%S'
+        formatter.default_msec_format = '%s.%03d'
+        # StreamHandler: Logs to stdout (console)
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(formatter)
+        logger.addHandler(stream_handler)
+        # FileHandler: Logs to a file
+        stage = 'prd' if os.environ.get('STAGE') == 'product' else 'stg'
+        log_file = f'shorturl-service-{stage}.log'
+        dir_path = os.path.join(os.path.abspath(__file__).split("/src")[0], 'persist')
+        os.makedirs(dir_path, exist_ok=True)
+        log_file = os.path.join(dir_path, log_file)
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
     return logger
