@@ -47,7 +47,7 @@ redis-cli 7.4.0
 ```
 $ mkdir /local-data
 $ docker run -d \
-  -v /local-data/:/data \
+  -v /Users/lzoe/backupDB/short-url/test/:/data \
   -p 10001:6379 \
   -p 13333:8001 \
   -e REDIS_ARGS="--requirepass shorturl --save 60 1000 --appendonly yes" \
@@ -75,7 +75,7 @@ drwxr-xr-x. 3 root root 43 Jul 31 01:08 /local-data/
 ```
 $ export REDIS_OM_URL=redis://default:shorturl@localhost:10001
 $ export SHORT_KEY_PREFIX=http://127.0.0.1:5000/
-$ export FLASK_ENV=development
+$ export FLASK_DEBUG=true
 $ flask run
  * Debug mode: on
  * Running on http://127.0.0.1:5000
