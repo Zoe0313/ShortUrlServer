@@ -12,7 +12,8 @@ import json
 import os
 from constant import SHORT_KEY_PREFIX
 
-API = 'https://vsanvia.broadcom.net/api/'
+# API = 'https://vsanvia.broadcom.net/api/'
+API = 'http://127.0.0.1:5000/api/'
 print(API)
 
 def get_short_url(long_url, short_key, expire_type, user_id):
@@ -125,38 +126,38 @@ def clearAll(testUser):
         delete_url_by_id(url['pk'])
 
 if __name__ == "__main__":
-    testUser = 'lzoe'
-    clearAll(testUser)
+    testUser = ''
+    # clearAll(testUser)
     # create a short url by customized short key
     testUrl = 'https://vmw-confluence.broadcom.net/display/vSANSHQE/Telemetry+Test+for+Global+Dedup'
-    testShortkey = 'globaldedup'
+    testShortkey = ''
     testExp = '1month'
     result = get_short_url(testUrl, testShortkey, testExp, testUser)
     shortUrl = result['short_url']
     urlId = result['url_id']
-    print(urlId)
+    print(result)
     redirect_by_short_url(shortUrl)
     # update the long url by short key
     testAnotherUrl = 'https://vmw-confluence.broadcom.net/display/SABU/vSAN+Short+URL+Service'
     update_longurl_by_shortkey(testShortkey, testAnotherUrl)
-    redirect_by_short_url(shortUrl)
-    # update the long url by url id
-    testAnotherUrl = 'https://lvn-dbc2443.lvn.broadcom.net/js032470/public_html/'
-    update_longurl_by_id(urlId, testAnotherUrl)
-    redirect_by_short_url(shortUrl)
-    # update short key by url id
-    testAnotherShortkey = 'lvn-dbc-js'
-    result = update_shortkey_by_id(urlId, testAnotherShortkey)
-    shortUrl = result['short_url']
-    redirect_by_short_url(shortUrl)
-    # query the url detail
-    query_url_details_by_id(urlId)
-    # query url list by user
-    get_urls_by_user(testUser)
-    # query url list by long url
-    get_urls_by_longurl(testAnotherUrl)
-    # query url list by short key
-    get_urls_by_shortkey(testAnotherShortkey)
+    # redirect_by_short_url(shortUrl)
+    # # update the long url by url id
+    # testAnotherUrl = 'https://lvn-dbc2443.lvn.broadcom.net/js032470/public_html/'
+    # update_longurl_by_id(urlId, testAnotherUrl)
+    # redirect_by_short_url(shortUrl)
+    # # update short key by url id
+    # testAnotherShortkey = 'lvn-dbc-js'
+    # result = update_shortkey_by_id(urlId, testAnotherShortkey)
+    # shortUrl = result['short_url']
+    # redirect_by_short_url(shortUrl)
+    # # query the url detail
+    # query_url_details_by_id(urlId)
+    # # query url list by user
+    # get_urls_by_user(testUser)
+    # # query url list by long url
+    # get_urls_by_longurl(testAnotherUrl)
+    # # query url list by short key
+    # get_urls_by_shortkey(testAnotherShortkey)
     # test the utilization of redirect this short url
     # for _ in range(10):
     #     redirect_by_short_url('http://127.0.0.1:5000/HELLO-url')

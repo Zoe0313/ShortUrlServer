@@ -1,6 +1,8 @@
 from flask import Flask, request, redirect, jsonify, abort, render_template, make_response
+from apscheduler.schedulers.background import BackgroundScheduler
 
 import functools
+from collections import Counter
 import time
 from nanoid import generate
 
@@ -8,7 +10,7 @@ from redis_om import Migrator
 from redis_om.model import NotFoundError
 from pydantic import ValidationError
 
-from src.schema import Url
+from src.schema import Url, STATUS, NumOfDaysDeterminedAsDeactivated
 from src.logger import initLogger
 from src.constant import *
 from src.utils import *
@@ -61,71 +63,6 @@ def checkSystemAdmin(user):
         return jsonify('ok')
     return abort(make_response(jsonify(message=f'User "{user}" is not admin.'), 400))
 
-@app.route('/api/service/status', methods=['GET'])
-def checkServiceStatus():
-    urls = Url.find().all()
-    # overall
-    filtered_urls = [data for data in urls if data.user_id != "lzoe"]
-    redirect_urls = [data for data in filtered_urls if data.utilization > 0]
-    total_number_of_urls = len(filtered_urls)
-    total_number_of_redirect_urls = len(redirect_urls)
-    total_redirect_times = sum(url.utilization for url in filtered_urls if url.utilization is not None)
-    # users
-    filtered_user_urls = [data for data in filtered_urls if data.user_id != "svc.vsan-er"]
-    redirect_user_urls = [data for data in filtered_user_urls if data.utilization > 0]
-    user_data = {
-        "number_of_urls": len(filtered_user_urls),
-        "number_of_redirected_urls": len(redirect_user_urls),
-        "redirect_times": sum(url.utilization for url in filtered_user_urls if url.utilization is not None)
-    }
-    # bot
-    filtered_bot_urls = [data for data in filtered_urls if data.user_id == "svc.vsan-er"]
-    redirect_bot_urls = [data for data in filtered_bot_urls if data.utilization > 0]
-    bot_data = {
-        "number_of_urls": len(filtered_bot_urls),
-        "number_of_redirected_urls": len(redirect_bot_urls),
-        "redirect_times": sum(url.utilization for url in filtered_bot_urls if url.utilization is not None)
-    }
-    return jsonify(number_of_overall_urls=total_number_of_urls,
-                   overall_redirect_times=total_redirect_times,
-                   number_of_overall_redirected_urls=total_number_of_redirect_urls,
-                   user=user_data, bot=bot_data)
-
-@app.route('/api/url/latest/create/<days>', methods=['GET'])
-def latestCreateUrl(days):
-    try:
-        days_ago = datetime.datetime.utcnow().date() - datetime.timedelta(days=int(days))
-    except:
-        return abort(make_response(jsonify(message='Bad request'), 400))
-    urls = Url.find().all()
-    latest_created_urls = [data for data in urls if data.create_at >= days_ago]
-    result = build_results(latest_created_urls)
-    latest_created_url_result = result["results"]
-    return jsonify(number_of_created_urls=len(latest_created_urls),
-                   latest_created_urls=latest_created_url_result)
-
-@app.route('/api/url/deprecated/analyze/<days>', methods=['GET'])
-def analyzeUrl(days):
-    try:
-        days_ago = datetime.datetime.utcnow().date() - datetime.timedelta(days=int(days))
-        days_ago_time = datetime.datetime.utcnow() - datetime.timedelta(days=int(days))
-    except:
-        return abort(make_response(jsonify(message='Bad request'), 400))
-    logger.info(f'Analyze {days_ago} ago the urls redirect times and last redirect time.')
-    urls = Url.find().all()
-    unused_urls = [data for data in urls if data.utilization == 0 and data.create_at <= days_ago]
-    recently_unused_urls = [data for data in urls if data.utilization > 0 and data.lastRedirectTime != None and data.lastRedirectTime <= days_ago_time]
-    
-    result = build_results(unused_urls)
-    unused_url_result = result["results"]
-    
-    result = build_results(recently_unused_urls)
-    recently_unused_url_result = result["results"]
-    
-    return jsonify(number_of_unused_urls=len(unused_urls), unused_urls=unused_url_result,
-                   number_of_recently_unused_urls=len(recently_unused_urls),
-                   recently_unused_urls=recently_unused_url_result)
-
 @app.route('/<shortKey>', methods=['GET'])
 @logExecutionTime
 def redirectUrl(shortKey):
@@ -144,6 +81,7 @@ def redirectUrl(shortKey):
     longUrl = url.original_url
     url.utilization = url.utilization + 1
     url.lastRedirectTime = datetime.datetime.utcnow()
+    url.status = STATUS.USED.value
     url.save()
     logger.info(f'Redirect by short key {shortKey}.')
     return redirect(longUrl)
@@ -211,22 +149,25 @@ def findById(id):
 @app.route('/api/url/<id>', methods=['DELETE'])
 def deleteById(id):
     try:
-        ret = Url.delete(id)
-        # Delete returns 1 if the url existed and was deleted, or 0 if they didn't exist.
+        url = Url.get(id)
+        url.status = STATUS.DELETED.value
+        url.save()
         logger.info(f'Delete short url by id: {id}.')
         return jsonify('ok')
     except NotFoundError:
         error = 'Not found by url id: ' + id
         return abort(make_response(jsonify(message=error), 404))
+    except ValidationError as e:
+        error = 'Validation error: ' + str(e)
+        logger.error(error)
+        return abort(make_response(jsonify(message=error), 500))
+    except Exception as e:
+        error = 'Internal error: ' + str(e)
+        logger.error(error)
+        return abort(make_response(jsonify(message=error), 500))
 
 @app.route('/api/url/<id>', methods=['POST'])
 def updateById(id):
-    try:
-        url = Url.get(id)
-    except NotFoundError:
-        error = 'Not found by url id: ' + id
-        return abort(make_response(jsonify(message=error), 404))
-
     try:
         data = json.loads(request.data.decode())
         originalUrl = data['original_url']
@@ -234,14 +175,17 @@ def updateById(id):
     except Exception as e:
         error = f'Bad request: {e}'
         return abort(make_response(jsonify(message=error), 400))
-    
     try:
+        url = Url.get(id)
         url.original_url = originalUrl
         url.hash_original = url2hash(originalUrl)
         url.save()
         shortUrl = SHORT_KEY_PREFIX + url.short_key
         logger.info(f'Update short url {shortUrl} by id: {id}.')
         return jsonify(short_url=shortUrl, long_url=url.original_url, url_id=url.pk)
+    except NotFoundError:
+        error = 'Not found by url id: ' + id
+        return abort(make_response(jsonify(message=error), 404))
     except ValidationError as e:
         error = 'Validation error: ' + str(e)
         logger.error(error)
@@ -280,28 +224,24 @@ def updateLongurlByShortkey():
         data = json.loads(request.data.decode())
         shortKey = data['short_key']
         originalUrl = data['original_url']
+        # validate for short key
+        error = validateShortkey(shortKey)
+        if error is not None:
+            return abort(make_response(jsonify(message=error), 400))
+        urls = find_by_shortkey(shortKey)
+        if len(urls) == 0:
+            error = 'Not found by short key: ' + shortKey
+            return abort(make_response(jsonify(message=error), 404))
+        # validate for long url
+        try:
+            validateUrl(originalUrl)
+        except Exception as e:
+            error = f'Bad request: {e}'
+            return abort(make_response(jsonify(message=error), 400))
     except:
         return abort(make_response(jsonify(message='Bad request'), 400))
-
-    # validate for short key
-    error = validateShortkey(shortKey)
-    if error is not None:
-        return abort(make_response(jsonify(message=error), 400))
-    urls = find_by_shortkey(shortKey)
-    if len(urls) == 0:
-        error = 'Not found by short key: ' + shortKey
-        return abort(make_response(jsonify(message=error), 404))
-
-    # validate for long url
-    try:
-        validateUrl(originalUrl)
-    except Exception as e:
-        error = f'Bad request: {e}'
-        return abort(make_response(jsonify(message=error), 400))
-
     try:
         url = urls[0]
-        logger.debug(url)
         url.original_url = originalUrl
         url.hash_original = url2hash(originalUrl)
         url.save()
@@ -329,6 +269,30 @@ def queryByShortkey(shortKey):
         return abort(make_response(jsonify(message=error), 404))
     return build_results(urls)
 
+@app.route('/api/status/<id>/<status>', methods=['POST'])
+def updateStatusById(id, status):
+    try:
+        status = status.upper()
+        statusValue = STATUS[status].value
+    except KeyError:
+        return abort(400, f'Bad request: {status} is not a valid STATUS value.')
+
+    try:
+        url = Url.get(id)
+        url.status = statusValue
+        url.save()
+    except NotFoundError:
+        error = 'Not found by url id: ' + id
+        return abort(make_response(jsonify(message=error), 404))
+    except ValidationError as e:
+        error = 'Validation error: ' + str(e)
+        logger.error(error)
+        return abort(make_response(jsonify(message=error), 500))
+    except Exception as e:
+        error = 'Internal error: ' + str(e)
+        logger.error(error)
+        return abort(make_response(jsonify(message=error), 500))
+
 @app.route('/api/shortkey/<id>/<shortKey>', methods=['POST'])
 @logExecutionTime
 def updateShortkeyById(id, shortKey):
@@ -342,26 +306,29 @@ def updateShortkeyById(id, shortKey):
 
     try:
         url = Url.get(id)
-        logger.debug(url)
         url.short_key = shortKey
+        url.customize = True
         url.save()
         shortUrl = SHORT_KEY_PREFIX + url.short_key
         logger.info(f'Update short key {shortKey} by id: {id}.')
         return jsonify(short_url=shortUrl, long_url=url.original_url, url_id=url.pk)
+    except NotFoundError:
+        error = 'Not found by url id: ' + id
+        return abort(make_response(jsonify(message=error), 404))
     except ValidationError as e:
         error = 'Validation error: ' + str(e)
         logger.error(error)
         return abort(make_response(jsonify(message=error), 500))
-    except NotFoundError:
-        error = 'Not found by url id: ' + id
-        return abort(make_response(jsonify(message=error), 404))
+    except Exception as e:
+        error = 'Internal error: ' + str(e)
+        logger.error(error)
+        return abort(make_response(jsonify(message=error), 500))
 
 @app.route('/api/urls', methods=['GET'])
 def queryByUser():
     user = request.args.get('user', '')
     if len(user) == 0:
         return abort(400, f'Bad request: No user specified.')
-
     datas = Url.find(
         (Url.user_id == user)
     ).all()
@@ -387,11 +354,17 @@ def find_by_shortkey(shortKey):
     logger.info(f'Short key "{shortKey}" found {len(datas)} records')
     return datas
 
-def create_url(short_key, long_url, expire_time, user_id):
+def create_url(short_key, long_url, expire_time, user_id, customize):
     now = datetime.datetime.utcnow().date()
     hash_value = url2hash(long_url)
-    new_url = Url(original_url=long_url, hash_original=hash_value, short_key=short_key, 
-                  expire_time=expire_time, create_at=now, user_id=user_id)
+    new_url = Url(original_url=long_url,
+                  hash_original=hash_value,
+                  short_key=short_key,
+                  status=STATUS.CREATED.value,
+                  create_at=now,
+                  expire_time=expire_time,
+                  user_id=user_id,
+                  customize=customize)
     new_url.save()
     if expire_time is not None:
         delta_second = (expire_time - now).days * 24 * 3600
@@ -402,7 +375,7 @@ def create_url(short_key, long_url, expire_time, user_id):
 
 def generate_shorturl(user_id, original_url, short_key, expire_time):
     if len(short_key) > 0:
-        pk = create_url(short_key, original_url, expire_time, user_id)
+        pk = create_url(short_key, original_url, expire_time, user_id, True)
         short_url = SHORT_KEY_PREFIX + short_key
         return short_url, pk
     
@@ -411,11 +384,89 @@ def generate_shorturl(user_id, original_url, short_key, expire_time):
         # check the short URL in use or not
         results = find_by_shortkey(short_key)
         if len(results) == 0:
-            pk = create_url(short_key, original_url, expire_time, user_id)
+            pk = create_url(short_key, original_url, expire_time, user_id, False)
             short_url = SHORT_KEY_PREFIX + short_key
             return short_url, pk
 
     raise Exception('Fail to generate a unique short url')
+
+# ============= Following is Metrics Definition ============= #
+
+@app.route('/api/service/status', methods=['GET'])
+def checkServiceStatus():
+    urls = Url.find().all()
+    # overall
+    filtered_urls = [data for data in urls if data.user_id != "lzoe"]
+    redirect_urls = [data for data in filtered_urls if data.utilization > 0]
+    total_number_of_urls = len(filtered_urls)
+    total_number_of_redirect_urls = len(redirect_urls)
+    total_redirect_times = sum(url.utilization for url in filtered_urls if url.utilization is not None)
+    # users
+    filtered_user_urls = [data for data in filtered_urls if data.user_id != "svc.vsan-er"]
+    redirect_user_urls = [data for data in filtered_user_urls if data.utilization > 0]
+    user_data = {
+        "number_of_urls": len(filtered_user_urls),
+        "number_of_redirected_urls": len(redirect_user_urls),
+        "redirect_times": sum(url.utilization for url in filtered_user_urls if url.utilization is not None)
+    }
+    # bot
+    filtered_bot_urls = [data for data in filtered_urls if data.user_id == "svc.vsan-er"]
+    redirect_bot_urls = [data for data in filtered_bot_urls if data.utilization > 0]
+    bot_data = {
+        "number_of_urls": len(filtered_bot_urls),
+        "number_of_redirected_urls": len(redirect_bot_urls),
+        "redirect_times": sum(url.utilization for url in filtered_bot_urls if url.utilization is not None)
+    }
+    return jsonify(number_of_overall_urls=total_number_of_urls,
+                   overall_redirect_times=total_redirect_times,
+                   number_of_overall_redirected_urls=total_number_of_redirect_urls,
+                   user=user_data, bot=bot_data)
+
+@app.route('/api/url/latest/create/<days>', methods=['GET'])
+def latestCreateUrl(days):
+    try:
+        days_ago = datetime.datetime.utcnow().date() - datetime.timedelta(days=int(days))
+    except:
+        return abort(make_response(jsonify(message='Bad request'), 400))
+    urls = Url.find().all()
+    latest_created_urls = [data for data in urls if data.create_at >= days_ago and data.user_id != "lzoe"]
+    result = build_results(latest_created_urls)
+    latest_created_url_result = result["results"]
+    return jsonify(number_of_created_urls=len(latest_created_urls),
+                   latest_created_urls=latest_created_url_result)
+
+@app.route('/api/url/status', methods=['GET'])
+def queryUrlStatus():
+    urls = Url.find().all()
+    filtered_urls = [data for data in urls if data.user_id != "lzoe"]
+    statusCounts = Counter(url.status for url in filtered_urls)
+    return jsonify(number_of_all=len(filtered_urls),
+                   number_of_created_urls=statusCounts.get(STATUS.CREATED.value, 0),
+                   number_of_used_urls=statusCounts.get(STATUS.USED.value, 0),
+                   number_of_deactivated_urls=statusCounts.get(STATUS.DEACTIVATED.value, 0),
+                   number_of_deleted_urls=statusCounts.get(STATUS.DELETED.value, 0))
+
+def updateUrlStatus():
+    now = datetime.datetime.utcnow()
+    logger.info('Update url status at: {}'.format(now.strftime("%A, %d. %B %Y %I:%M:%S %p")))
+    urls = Url.find().all()
+    days_ago = now.date() - datetime.timedelta(days=NumOfDaysDeterminedAsDeactivated)
+    days_ago_time = now - datetime.timedelta(days=NumOfDaysDeterminedAsDeactivated)
+    for url in urls:
+        if url.status is None:
+            url.status = STATUS.USED.value if url.utilization > 0 else STATUS.CREATED.value
+            url.save()
+        # urls never be used and recently not be used
+        if (url.status == STATUS.CREATED.value and url.create_at <= days_ago) \
+           or (url.status == STATUS.USED.value and url.lastRedirectTime <= days_ago_time):
+            url.status = STATUS.DEACTIVATED.value
+            url.save()
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(func=updateUrlStatus, trigger="cron", hour=0)
+scheduler.start()
+
+updateUrlStatus()
 
 # Create a RedisSearch index for instances of the Url model.
 Migrator().run()
